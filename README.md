@@ -1,7 +1,4 @@
-# EXPERIMENT-06 : INTERRUPT GENERATION USING PUSHBUTTON AND SIMULATING THE OUTPUT
-
-## Name : Khamalraaj S
-## Reg No. : 212224230122
+# EXPERIMENT-06-INTERRUPT-GENERATION-USING-PUSHBUTTON-AND-SIMULATING-THE-OUTPUT
 
 ### Aim:
 To Interface a push button and generate an interrupt , simulate it using an led and simuate it on  proteus 
@@ -19,7 +16,6 @@ Micro-Coded Architecture So that interrupt stacking, entry, and exit are done au
 The processor mode can change when exceptions occur. And it can be in one of the following modes:
 Thread Mode: Which is entered on reset.
 Handler Mode: Which is entered on all other exceptions.
-
 ![image](https://github.com/vasanthkumarch/EXPERIMENT-06-INTERRUPT-GENERATION-USING-PUSHBUTTON-AND-SIMULATING-THE-OUTPUT-/assets/36288975/4f52f2d6-4cdb-4315-b2b2-b55dc1639c43)
 The STM32 ARM microcontroller interrupts are generated in the following manner:
 
@@ -91,75 +87,88 @@ https://engineeringxpert.com/wp-content/uploads/2022/04/26.png
 
 
   
+
 ## STM 32 CUBE PROGRAM :
 ```
 #include "main.h"
-#include "lcd.h"
+
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
+
 int main(void)
 {
   HAL_Init();
+
   SystemClock_Config();
+
   MX_GPIO_Init();
-  Lcd_PortType ports[]= {GPIOA,GPIOA,GPIOA,GPIOA};
-  Lcd_PinType pins[] = {GPIO_PIN_6,GPIO_PIN_5,GPIO_PIN_4,GPIO_PIN_3};
-  Lcd_HandleTypeDef lcd;
-  lcd = Lcd_create(ports, pins, GPIOB,GPIO_PIN_1, GPIOB,GPIO_PIN_0, LCD_4_BIT_MODE);
-  Lcd_cursor(&lcd,0,0);
-  Lcd_string(&lcd, "HEMNATH");
-  HAL_Delay(1000);
-  Lcd_cursor(&lcd,1,1);
-  Lcd_string(&lcd, "212224240057");
-  HAL_Delay(1000);
+
   while (1)
   {
-    
   }
 }
+void HAL_GPIO_EXIT_Callback(uint16_t GPIO_Pin){
+	if(GPIO_Pin==GPIO_PIN_9){
+		HAL_GPIO_TogglePin(GPIOA,GPIO_PIN_11);
+	}
+}
+
 void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+
   __HAL_RCC_PWR_CLK_ENABLE();
   __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE2);
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
-  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
-  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.HSEState = RCC_HSE_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     Error_Handler();
   }
+
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
-  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSI;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSE;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
+
   if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK)
   {
     Error_Handler();
   }
+
+  HAL_RCC_EnableCSS();
 }
+
 static void MX_GPIO_Init(void)
 {
   GPIO_InitTypeDef GPIO_InitStruct = {0};
+
+  __HAL_RCC_GPIOH_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
-  __HAL_RCC_GPIOB_CLK_ENABLE();
-  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6, GPIO_PIN_RESET);
-  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0|GPIO_PIN_1, GPIO_PIN_RESET);
-  GPIO_InitStruct.Pin = GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6;
+
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_11, GPIO_PIN_RESET);
+
+  GPIO_InitStruct.Pin = GPIO_PIN_9;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  GPIO_InitStruct.Pin = GPIO_PIN_11;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-  GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  HAL_NVIC_SetPriority(EXTI9_5_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
+
 }
+
 void Error_Handler(void)
 {
   __disable_irq();
@@ -171,24 +180,19 @@ void Error_Handler(void)
 #ifdef  USE_FULL_ASSERT
 void assert_failed(uint8_t *file, uint32_t line)
 {
-
 }
 #endif
-
-
 ```
 
+
 ## Output screen shots of proteus  :
-<img width="1476" height="871" alt="image" src="https://github.com/user-attachments/assets/a48cbb26-8be4-45fd-801c-930d5283e643" />
+ <img width="1495" height="877" alt="image" src="https://github.com/user-attachments/assets/e27e28e9-c1c9-45c7-b5d8-cddeeed764ca" />
+<img width="1543" height="920" alt="image" src="https://github.com/user-attachments/assets/6422b11a-92ab-492e-b224-76e6f103fc76" />
 
-
- 
  
  ## CIRCUIT DIAGRAM (EXPORT THE GRAPHICS TO PDF AND ADD THE SCREEN SHOT HERE): 
-<img width="1078" height="641" alt="Screenshot 2025-11-20 102911" src="https://github.com/user-attachments/assets/18013d1a-4944-4cbd-8e4e-324a09e2b996" />
+ <img width="1108" height="969" alt="image" src="https://github.com/user-attachments/assets/67c8155f-ddd9-49d2-a1cc-d16b3b5bea63" />
 
-
- 
  
 ## Result :
-Interfacing a push button and an interrupt generation is simulated using proteus 
+Interfacing a push button and interrupt genrateion is simulated using proteus 
